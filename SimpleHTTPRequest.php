@@ -36,11 +36,32 @@ class SimpleHTTPRequest
         return file_get_contents($url . $query);
     }
 
-    public function post($url, $query_string = array())
+    public function post($url, $data_string = array())
     {
         if ($this->basic_auth) {
             $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
         }
+
+        $data = '';
+        if (count($data_string) != 0) {
+            $data = '?' . http_build_query($data_string);
+        }
+
+        //header
+        $header = array(
+            "Content-Type: application/x-www-form-urlencoded",
+            "Content-Length: ".strlen($data)
+        );
+
+        $context = array(
+            "http" => array(
+                "method"  => "POST",
+                "header"  => implode("\r\n", $header),
+                "content" => $data
+            )
+        );
+
+        return file_get_contents($url, false, stream_context_create($context));
     }
 
     public static function addFile($filename, $data)
@@ -92,7 +113,4 @@ $request = new SimpleHTTPRequest();
 $result = $request->get('http://project-p.jp/halt/echo.php?hoge=huga');
 var_dump($result);
  */
-
-
-
 
