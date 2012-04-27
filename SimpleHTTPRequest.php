@@ -17,7 +17,7 @@ class SimpleHTTPRequest
     private $method = 'get';
     private $basic_auth = '';
     private $query_string = array();
-    private $file = array(); // ファイルやその情報をもったresult配列
+    private $files = array(); // ファイルやその情報をもったresult配列
 
     public function setBasicAuth($username, $password)
     {
@@ -55,9 +55,10 @@ class SimpleHTTPRequest
             "Content-Length: ".strlen($data)
         );
 
-        if (count($this->file) > 0) {
-            $header = $this->file['header'];
-            $data = $this->file['data'];
+        if (count($this->files) > 0) {
+            $file = current($this->files);
+            $header = $file['header'];
+            $data = $file['data'];
         }
 
         $context = array(
@@ -71,17 +72,20 @@ class SimpleHTTPRequest
         return file_get_contents($url, false, stream_context_create($context));
     }
 
-    public function addFile($filename, $mime = '')
+    public function addFile($name, $filename, $mime = 'text/plain')
     {
         if (!file_exists($filename)) {
             throw new InvalidArgumentException;
         }
 
+        $file_data = file_get_contents($filename);
+        $base_filename = basename($filename);
+
         $boundary = '---------------------------'.microtime();
 
         $data = <<< EOD
             --{$boundary}
-            Content-Disposition: form-data; name="test"
+            Content-Disposition: form-data; name="simplehttprequest"
 
 hogehoge
 --{$boundary}
@@ -89,20 +93,20 @@ Content-Disposition: form-data; name="test2"
 
 foobar
 --{$boundary}
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
+Content-Disposition: form-data; name="{$name}"; filename="{$base_filename}"
+Content-Type: {$mime}
 
-value2
+{$file_data}
 --{$boundary}--
 EOD;
 
-    $this->file = array(
-        'header' => array(
-            "Content-Type: multipart/form-data; boundary={$boundary}",
-            "Content-Length: " . strlen($data)
-        ),
-        'data' => $data
-    );
+        $this->files[$name] = array(
+            'header' => array(
+                "Content-Type: multipart/form-data; boundary={$boundary}",
+                "Content-Length: " . strlen($data)
+            ),
+            'data' => $data
+        );
     }
 }
 
@@ -118,7 +122,7 @@ var_dump($result);
 
 /*
 $request = new SimpleHTTPRequest();
-$request->addFile('./SimpleHTTPRequest.php');
+$request->addFile('photo', './SimpleHTTPRequest.php');
 $result = $request->post('http://project-p.jp/halt/echo.php?hoge=huga');
 var_dump($result);
  */
