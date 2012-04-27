@@ -22,16 +22,21 @@ class SimpleHTTPRequest
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
     }
 
-    public function get($url)
+    // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
+    public function get($url, $query_string = array())
     {
         if ($this->basic_auth) {
             $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
         }
 
-        return file_get_contents($url);
+        $query = '';
+        if (count($query_string) != 0) {
+            $query = '?' . http_build_query($query_string);
+        }
+        return file_get_contents($url . $query);
     }
 
-    public function post($url)
+    public function post($url, $query_string = array())
     {
         if ($this->basic_auth) {
             $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
@@ -77,4 +82,17 @@ var_dump(file_get_contents($url,false,$ctx));
 
     }
 }
+
+/*
+$request = new SimpleHTTPRequest();
+$result = $request->get('http://project-p.jp/halt/echo.php', array('hoge' => 'huga', 'moge' => 'pole'));
+var_dump($result);
+
+$request = new SimpleHTTPRequest();
+$result = $request->get('http://project-p.jp/halt/echo.php?hoge=huga');
+var_dump($result);
+ */
+
+
+
 
