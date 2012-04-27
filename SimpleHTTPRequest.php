@@ -17,7 +17,7 @@ class SimpleHTTPRequest
     private $method = 'get';
     private $basic_auth = '';
     private $query_string = array();
-    private $file_boundary = '';
+    private $file = array(); // ファイルやその情報をもったresult配列
 
     public function setBasicAuth($username, $password)
     {
@@ -55,6 +55,11 @@ class SimpleHTTPRequest
             "Content-Length: ".strlen($data)
         );
 
+        if (count($this->file) > 0) {
+            $header = $this->file['header'];
+            $data = $this->file['data'];
+        }
+
         $context = array(
             "http" => array(
                 "method"  => "POST",
@@ -66,11 +71,15 @@ class SimpleHTTPRequest
         return file_get_contents($url, false, stream_context_create($context));
     }
 
-    public static function addFile($filename, $data)
+    public function addFile($filename, $mime = '')
     {
+        if (!file_exists($filename)) {
+            throw new InvalidArgumentException;
+        }
+
         $boundary = '---------------------------'.microtime();
 
-        $data = <<< __data
+        $data = <<< EOD
             --{$boundary}
             Content-Disposition: form-data; name="test"
 
@@ -85,21 +94,15 @@ Content-Type: text/plain
 
 value2
 --{$boundary}--
-__data;
+EOD;
 
-$header = array(
-    "Content-Type: multipart/form-data; boundary=".$boundary,
-    "Content-Length: ".strlen($data)
-);
-
-$context = array(
-    "http" => array(
-        "method"  => "POST",
-        "header"  => implode("\r\n", $header),
-        "content" => $data
-    )
-);
-        return file_get_contents($url, false, stream_context_create($context));
+    $this->file = array(
+        'header' => array(
+            "Content-Type: multipart/form-data; boundary={$boundary}",
+            "Content-Length: " . strlen($data)
+        ),
+        'data' => $data
+    );
     }
 }
 
@@ -113,3 +116,9 @@ $result = $request->get('http://project-p.jp/halt/echo.php?hoge=huga');
 var_dump($result);
  */
 
+/*
+$request = new SimpleHTTPRequest();
+$request->addFile('./SimpleHTTPRequest.php');
+$result = $request->post('http://project-p.jp/halt/echo.php?hoge=huga');
+var_dump($result);
+ */
