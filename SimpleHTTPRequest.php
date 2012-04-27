@@ -1,6 +1,7 @@
 <?php
 /**
  *
+ * とりあえず単一のファイルをアップロードできればよし！
  * BasicAuthができる
  * Fileが追加できる
  * getができる
@@ -16,10 +17,12 @@ class SimpleHTTPRequest
     private $method = 'get';
     private $basic_auth = '';
     private $query_string = array();
+    private $files = array(); // ファイルやその情報をもったresult配列
 
     public function setBasicAuth($username, $password)
     {
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
+        $this->file_boundary = '';
     }
 
     // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
@@ -36,20 +39,53 @@ class SimpleHTTPRequest
         return file_get_contents($url . $query);
     }
 
-    public function post($url, $query_string = array())
+    public function post($url, $data_string = array())
     {
         if ($this->basic_auth) {
             $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
         }
+
+        $data = '';
+        if (count($data_string) != 0) {
+            $data = '?' . http_build_query($data_string);
+        }
+
+        $header = array(
+            "Content-Type: application/x-www-form-urlencoded",
+            "Content-Length: ".strlen($data)
+        );
+
+        if (count($this->files) > 0) {
+            $file = current($this->files);
+            $header = $file['header'];
+            $data = $file['data'];
+        }
+
+        $context = array(
+            "http" => array(
+                "method"  => "POST",
+                "header"  => implode("\r\n", $header),
+                "content" => $data
+            )
+        );
+
+        return file_get_contents($url, false, stream_context_create($context));
     }
 
-    public static function addFile($filename, $data)
+    public function addFile($name, $filename, $mime = 'text/plain')
     {
-        $boundary = '---------------------------'.time();
+        if (!file_exists($filename)) {
+            throw new InvalidArgumentException;
+        }
 
-        $data = <<< __data
+        $file_data = file_get_contents($filename);
+        $base_filename = basename($filename);
+
+        $boundary = '---------------------------'.microtime();
+
+        $data = <<< EOD
             --{$boundary}
-            Content-Disposition: form-data; name="test"
+            Content-Disposition: form-data; name="simplehttprequest"
 
 hogehoge
 --{$boundary}
@@ -57,29 +93,20 @@ Content-Disposition: form-data; name="test2"
 
 foobar
 --{$boundary}
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
+Content-Disposition: form-data; name="{$name}"; filename="{$base_filename}"
+Content-Type: {$mime}
 
-value2
+{$file_data}
 --{$boundary}--
-__data;
+EOD;
 
-$header = array(
-    "Content-Type: multipart/form-data; boundary=".$boundary,
-    "Content-Length: ".strlen($data)
-);
-
-$context = array(
-    "http" => array(
-        "method"  => "POST",
-        "header"  => implode("\r\n", $header),
-        "content" => $data
-    )
-);
-$ctx = stream_context_create($context);
-$url = 'http://example.com/upload_url';
-var_dump(file_get_contents($url,false,$ctx));
-
+        $this->files[$name] = array(
+            'header' => array(
+                "Content-Type: multipart/form-data; boundary={$boundary}",
+                "Content-Length: " . strlen($data)
+            ),
+            'data' => $data
+        );
     }
 }
 
@@ -93,6 +120,9 @@ $result = $request->get('http://project-p.jp/halt/echo.php?hoge=huga');
 var_dump($result);
  */
 
-
-
-
+/*
+$request = new SimpleHTTPRequest();
+$request->addFile('photo', './SimpleHTTPRequest.php');
+$result = $request->post('http://project-p.jp/halt/echo.php?hoge=huga');
+var_dump($result);
+ */
