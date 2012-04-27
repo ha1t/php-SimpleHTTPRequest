@@ -1,6 +1,7 @@
 <?php
 /**
  *
+ * とりあえず単一のファイルをアップロードできればよし！
  * BasicAuthができる
  * Fileが追加できる
  * getができる
@@ -16,10 +17,12 @@ class SimpleHTTPRequest
     private $method = 'get';
     private $basic_auth = '';
     private $query_string = array();
+    private $file_boundary = '';
 
     public function setBasicAuth($username, $password)
     {
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
+        $this->file_boundary = '';
     }
 
     // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
@@ -47,7 +50,6 @@ class SimpleHTTPRequest
             $data = '?' . http_build_query($data_string);
         }
 
-        //header
         $header = array(
             "Content-Type: application/x-www-form-urlencoded",
             "Content-Length: ".strlen($data)
@@ -66,7 +68,7 @@ class SimpleHTTPRequest
 
     public static function addFile($filename, $data)
     {
-        $boundary = '---------------------------'.time();
+        $boundary = '---------------------------'.microtime();
 
         $data = <<< __data
             --{$boundary}
@@ -97,10 +99,7 @@ $context = array(
         "content" => $data
     )
 );
-$ctx = stream_context_create($context);
-$url = 'http://example.com/upload_url';
-var_dump(file_get_contents($url,false,$ctx));
-
+        return file_get_contents($url, false, stream_context_create($context));
     }
 }
 
