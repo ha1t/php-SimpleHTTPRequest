@@ -22,11 +22,6 @@ class SimpleHTTPRequest
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
     }
 
-    public function setQueryString()
-    {
-
-    }
-
     public function get($url)
     {
         if ($this->basic_auth) {
