@@ -22,7 +22,6 @@ class SimpleHTTPRequest
     public function setBasicAuth($username, $password)
     {
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
-        $this->file_boundary = '';
     }
 
     // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
