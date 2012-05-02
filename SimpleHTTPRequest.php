@@ -68,7 +68,13 @@ class SimpleHTTPRequest
             )
         );
 
-        return file_get_contents($url, false, stream_context_create($context));
+        $result = file_get_contents($url, false, stream_context_create($context));
+
+        if ($result === false) {
+            var_dump($http_response_header);
+        }
+
+        return $result;
     }
 
     public function addFile($name, $filename, $mime = 'text/plain')
