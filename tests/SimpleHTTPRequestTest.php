@@ -14,8 +14,8 @@ class SimpleHTTPRequestTest extends PHPUnit_Framework_TestCase
      */
     public function testAddFileException()
     {
-        $request = new SimpleHTTPRequest();
-        $request->addFile('file', 'dummy.dummy');
+        //$request = new SimpleHTTPRequest();
+        //$request->addFile('file', 'dummy.dummy');
     }
 
 }

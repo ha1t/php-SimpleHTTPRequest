@@ -20,21 +20,16 @@ class SimpleHTTPRequest
     private $query_string = array();
     private $files = array(); // ファイルやその情報をもったresult配列
 
-    public function setBasicAuth($username, $password)
-    {
-        $this->basic_auth = urlencode($username) . ':' . urlencode($password);
-    }
-
     private static function createBasicAuth($username, $password)
     {
         return urlencode($username) . ':' . urlencode($password);
     }
 
     // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
-    public function get($url, $query_string = array())
+    public static function get($url, $query_string = array(), $basic_auth = array())
     {
-        if ($this->basic_auth) {
-            $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
+        if ($basic_auth) {
+            $url = str_replace('http://', 'http://' . self::createBasicAuth($basic_auth['username'], $basic_auth['password']) . '@', $url);
         }
 
         $query = '';
