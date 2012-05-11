@@ -1,6 +1,7 @@
 <?php
 /**
  *
+ * @note http://php.net/manual/ja/context.http.php#context.http.ignore-errors
  * とりあえず単一のファイルをアップロードできればよし！
  * BasicAuthができる
  * Fileが追加できる
@@ -24,6 +25,11 @@ class SimpleHTTPRequest
         $this->basic_auth = urlencode($username) . ':' . urlencode($password);
     }
 
+    private static function createBasicAuth($username, $password)
+    {
+        return urlencode($username) . ':' . urlencode($password);
+    }
+
     // 第二引数でarrayに入れてもいいけどurlにそのままQueryStringを入れても良い感じになっている
     public function get($url, $query_string = array())
     {
@@ -38,41 +44,56 @@ class SimpleHTTPRequest
         return file_get_contents($url . $query);
     }
 
-    public function post($url, $data_string = array())
+    public static function post($url, $data_string = array(), $basic_auth = array(), $files = array())
     {
-        if ($this->basic_auth) {
-            $url = str_replace('http://', "http://{$this->basic_auth}@", $url);
+        if ($basic_auth) {
+            $url = str_replace('http://', 'http://' . self::createBasicAuth($basic_auth['username'], $basic_auth['password']) . '@', $url);
         }
 
         $data = '';
         if (count($data_string) != 0) {
-            $data = '?' . http_build_query($data_string);
+            $data = http_build_query($data_string, '', '&');
         }
 
         $header = array(
-            "Content-Type: application/x-www-form-urlencoded",
-            "Content-Length: ".strlen($data)
+            'Content-Type: application/x-www-form-urlencoded',
+            'Content-Length: ' . strlen($data),
         );
 
+        /*
         if (count($this->files) > 0) {
-            $file = current($this->files);
-            $header = $file['header'];
-            $data = $file['data'];
+            foreach ($this->files as $file) {
+                $header = $file['header'];
+                $data = $file['data'];
+            }
         }
+         */
 
         $context = array(
-            "http" => array(
-                "method"  => "POST",
-                "header"  => implode("\r\n", $header),
-                "content" => $data
-            )
+            'http' => array(
+                'method'  => 'POST',
+                'header'  => implode("\r\n", $header),
+                'content' => $data,
+                'ignore_errors' => true,
+            ),
         );
 
         $result = file_get_contents($url, false, stream_context_create($context));
 
         if ($result === false) {
-            var_dump($http_response_header);
+            throw new ErrorException(print_r($http_response_header, true));
         }
+
+        // とりあえずいかなる時もレスポンスを返す感じにした
+        // はぁーっ。Resultクラス作りたくねーしなー
+        /*
+        $parts = explode(' ', $http_response_header[0]);
+        $http_status_code = $parts[1];
+
+        if ($http_status_code{0} == '4') {
+            throw new ErrorException('400');
+        }
+         */
 
         return $result;
     }
@@ -89,14 +110,6 @@ class SimpleHTTPRequest
         $boundary = '---------------------------'.microtime();
 
         $data = <<< EOD
-            --{$boundary}
-            Content-Disposition: form-data; name="simplehttprequest"
-
-hogehoge
---{$boundary}
-Content-Disposition: form-data; name="test2"
-
-foobar
 --{$boundary}
 Content-Disposition: form-data; name="{$name}"; filename="{$base_filename}"
 Content-Type: {$mime}
@@ -115,6 +128,7 @@ EOD;
     }
 }
 
+// http://memorva.jp/memo/php/fsockopen.php
 /*
 $request = new SimpleHTTPRequest();
 $result = $request->get('http://project-p.jp/halt/echo.php', array('hoge' => 'huga', 'moge' => 'pole'));
@@ -125,9 +139,7 @@ $result = $request->get('http://project-p.jp/halt/echo.php?hoge=huga');
 var_dump($result);
  */
 
-/*
 $request = new SimpleHTTPRequest();
-$request->addFile('photo', './SimpleHTTPRequest.php');
-$result = $request->post('http://project-p.jp/halt/echo.php?hoge=huga');
+//$request->addFile('photo', './SimpleHTTPRequest.php');
+$result = $request->post('http://project-p.jp/halt/echo.php', array('hoge' => 'huga'));
 var_dump($result);
- */
